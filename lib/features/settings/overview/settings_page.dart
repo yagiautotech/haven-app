@@ -1,198 +1,282 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
-import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
-import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
-import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
+import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/features/profile/model/profile_entity.dart';
+import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
+import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/gen/translations.g.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-enum ConfigOptionSection {
-  warp,
-  fragment;
-
-  static final _warpKey = GlobalKey(debugLabel: "warp-section-key");
-  static final _fragmentKey = GlobalKey(debugLabel: "fragment-section-key");
-
-  GlobalKey get key => switch (this) {
-    ConfigOptionSection.warp => _warpKey,
-    ConfigOptionSection.fragment => _fragmentKey,
-  };
-}
-
-class SettingsPage extends HookConsumerWidget {
-  SettingsPage({super.key, String? section})
-    : section = section != null ? ConfigOptionSection.values.byName(section) : null;
-
-  final ConfigOptionSection? section;
+class SettingsPage extends ConsumerStatefulWidget {
+  const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  final _urlController = TextEditingController();
+  bool _isEditing = false;
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null) {
+      setState(() {
+        _urlController.text = data!.text!;
+        _isEditing = true;
+      });
+    }
+  }
+
+  Future<void> _saveUrl() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    await ref.read(addProfileNotifierProvider.notifier).addClipboard(url);
+    setState(() => _isEditing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = ref.watch(translationsProvider).requireValue;
-    // final scrollController = useScrollController();
+    final activeProfile = ref.watch(activeProfileProvider);
+    final addState = ref.watch(addProfileNotifierProvider);
+    final locale = ref.watch(localePreferencesProvider);
+    final version = ref.watch(appInfoProvider).valueOrNull?.presentVersion ?? '';
 
-    // useMemoized(
-    //   () {
-    //     if (section != null) {
-    //       WidgetsBinding.instance.addPostFrameCallback(
-    //         (_) {
-    //           final box = section!.key.currentContext?.findRenderObject() as RenderBox?;
-
-    //           final offset = box?.localToGlobal(Offset.zero);
-    //           if (offset == null) return;
-    //           final height = scrollController.offset + offset.dy - MediaQueryData.fromView(View.of(context)).padding.top - kToolbarHeight;
-    //           scrollController.animateTo(
-    //             height,
-    //             duration: const Duration(milliseconds: 500),
-    //             curve: Curves.decelerate,
-    //           );
-    //         },
-    //       );
-    //     }
-    //   },
-    // );
+    // Pre-fill URL from active profile if not editing
+    if (!_isEditing) {
+      final url = activeProfile.valueOrNull is RemoteProfileEntity
+          ? (activeProfile.valueOrNull as RemoteProfileEntity).url
+          : '';
+      if (_urlController.text != url) {
+        _urlController.text = url;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(t.pages.settings.title),
-        actions: [
-          MenuAnchor(
-            menuChildren: <Widget>[
-              SubmenuButton(
-                menuChildren: <Widget>[
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(dialogNotifierProvider.notifier)
-                        .showConfirmation(
-                          title: t.common.msg.import.confirm,
-                          message: t.dialogs.confirmation.settings.import.msg,
-                        )
-                        .then((shouldImport) async {
-                          if (shouldImport) {
-                            await ref.read(configOptionNotifierProvider.notifier).importFromClipboard();
-                          }
-                        }),
-                    child: Text(t.pages.settings.options.import.clipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(dialogNotifierProvider.notifier)
-                        .showConfirmation(
-                          title: t.common.msg.import.confirm,
-                          message: t.dialogs.confirmation.settings.import.msg,
-                        )
-                        .then((shouldImport) async {
-                          if (shouldImport) {
-                            await ref.read(configOptionNotifierProvider.notifier).importFromJsonFile();
-                          }
-                        }),
-                    child: Text(t.pages.settings.options.import.file),
-                  ),
-                ],
-                child: Text(t.common.import),
-              ),
-              SubmenuButton(
-                menuChildren: <Widget>[
-                  MenuItemButton(
-                    onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).exportJsonClipboard(),
-                    child: Text(t.pages.settings.options.export.anonymousToClipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).exportJsonFile(),
-                    child: Text(t.pages.settings.options.export.anonymousToFile),
-                  ),
-                  const PopupMenuDivider(),
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(configOptionNotifierProvider.notifier)
-                        .exportJsonClipboard(excludePrivate: false),
-                    child: Text(t.pages.settings.options.export.allToClipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async =>
-                        await ref.read(configOptionNotifierProvider.notifier).exportJsonFile(excludePrivate: false),
-                    child: Text(t.pages.settings.options.export.allToFile),
-                  ),
-                ],
-                child: Text(t.common.export),
-              ),
-              const PopupMenuDivider(),
-              MenuItemButton(
-                child: Text(t.pages.settings.options.reset),
-                onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).resetOption(),
-              ),
-            ],
-            builder: (context, controller, child) => IconButton(
-              onPressed: () {
-                if (controller.isOpen) {
-                  controller.close();
-                } else {
-                  controller.open();
-                }
-              },
-              icon: const Icon(Icons.more_vert_rounded),
-            ),
-          ),
-          const Gap(8),
-        ],
+        leading: const BackButton(),
       ),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          // TipCard(message: t.settings.experimentalMsg),
-          SettingsSection(
-            title: t.pages.settings.general.title,
-            icon: Icons.layers_rounded,
-            namedLocation: context.namedLocation('general'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.routing.title,
-            icon: Icons.route_rounded,
-            namedLocation: context.namedLocation('routeOptions'),
-          ),
-          if (PlatformUtils.isIOS)
-            Material(
-              child: ListTile(
-                title: Text(t.pages.settings.resetTunnel),
-                leading: const Icon(Icons.autorenew_rounded),
-                onTap: () async {
-                  await ref.read(resetTunnelNotifierProvider.notifier).run();
-                },
+          // Subscription section
+          _SectionHeader(label: 'Подписка'),
+          const Gap(8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Subscription URL',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey),
+                  ),
+                  const Gap(8),
+                  TextField(
+                    controller: _urlController,
+                    decoration: InputDecoration(
+                      hintText: 'https://...',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.content_paste_rounded, size: 20),
+                        tooltip: 'Вставить из буфера',
+                        onPressed: _pasteFromClipboard,
+                      ),
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                    onChanged: (_) => setState(() => _isEditing = true),
+                  ),
+                  const Gap(12),
+                  SizedBox(
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: addState.isLoading ? null : _saveUrl,
+                      icon: addState.isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_rounded, size: 20),
+                      label: Text(
+                        activeProfile.valueOrNull != null ? 'Обновить' : 'Сохранить',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          if (Breakpoint(context).isMobile()) ...[
-            SettingsSection(
-              title: t.pages.logs.title,
-              icon: Icons.description_rounded,
-              namedLocation: context.namedLocation('logs'),
+          ),
+
+          const Gap(24),
+
+          // Language section
+          _SectionHeader(label: t.pages.settings.general.language),
+          const Gap(8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.language_rounded, size: 20, color: Color(0xFF1565C0)),
+                  const Gap(12),
+                  const Text('Язык / Language'),
+                  const Spacer(),
+                  _LangChip(
+                    label: 'RU',
+                    selected: locale == AppLocale.ru,
+                    onTap: () => ref
+                        .read(localePreferencesProvider.notifier)
+                        .changeLocale(AppLocale.ru),
+                  ),
+                  const Gap(8),
+                  _LangChip(
+                    label: 'EN',
+                    selected: locale == AppLocale.en,
+                    onTap: () => ref
+                        .read(localePreferencesProvider.notifier)
+                        .changeLocale(AppLocale.en),
+                  ),
+                ],
+              ),
             ),
-            SettingsSection(
-              title: t.pages.about.title,
-              icon: Icons.info_rounded,
-              namedLocation: context.namedLocation('about'),
+          ),
+
+          const Gap(24),
+
+          // About section
+          _SectionHeader(label: t.pages.about.title),
+          const Gap(8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Assets.images.logo.svg(height: 48),
+                      const Gap(14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.common.appTitle,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          if (version.isNotEmpty)
+                            Text(
+                              'v$version',
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.open_in_browser_rounded, color: Color(0xFF1565C0)),
+                  title: const Text('haven.yagihub.ru'),
+                  subtitle: const Text('Сайт и поддержка'),
+                  onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.websiteUrl)),
+                ),
+              ],
             ),
-          ],
+          ),
+
+          const Gap(32),
         ],
       ),
     );
   }
 }
 
-class SettingsSection extends HookConsumerWidget {
-  const SettingsSection({super.key, required this.title, required this.icon, required this.namedLocation});
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
 
-  final String title;
-  final IconData icon;
-  final String namedLocation;
+  final String label;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: () => context.go(namedLocation),
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.primary,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _LangChip extends StatelessWidget {
+  const _LangChip({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1565C0) : Colors.transparent,
+          border: Border.all(
+            color: selected ? const Color(0xFF1565C0) : Colors.grey.shade400,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.grey.shade600,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+      ),
     );
   }
 }
