@@ -372,36 +372,36 @@ abstract class ConfigOptions {
     final rules = switch (region) {
       Region.ir => [
           const SingboxRule(
-            domains: "domain:.ir,geosite:ir",
-            ip: "geoip:ir",
+            domains: ["domain:.ir", "geosite:ir"],
+            ip: ["geoip:ir"],
             outbound: RuleOutbound.bypass,
           ),
         ],
       Region.cn => [
           const SingboxRule(
-            domains: "domain:.cn,geosite:cn",
-            ip: "geoip:cn",
+            domains: ["domain:.cn", "geosite:cn"],
+            ip: ["geoip:cn"],
             outbound: RuleOutbound.bypass,
           ),
         ],
       Region.ru => [
           const SingboxRule(
-            domains: "domain:.ru,geosite:ru",
-            ip: "geoip:ru",
+            domains: ["domain:.ru", "geosite:ru"],
+            ip: ["geoip:ru"],
             outbound: RuleOutbound.bypass,
           ),
         ],
       Region.af => [
           const SingboxRule(
-            domains: "domain:.af,geosite:af",
-            ip: "geoip:af",
+            domains: ["domain:.af", "geosite:af"],
+            ip: ["geoip:af"],
             outbound: RuleOutbound.bypass,
           ),
         ],
       Region.id => [
           const SingboxRule(
-            domains: "domain:.id,geosite:id",
-            ip: "geoip:id",
+            domains: ["domain:.id", "geosite:id"],
+            ip: ["geoip:id"],
             outbound: RuleOutbound.bypass,
           ),
         ],
@@ -416,14 +416,19 @@ abstract class ConfigOptions {
           .map((d) => d.trim())
           .where((d) => d.isNotEmpty)
           .map((d) => d.contains(':') ? d : 'domain:$d')
-          .join(',');
+          .toList();
       rules.add(SingboxRule(domains: domainList, outbound: RuleOutbound.bypass));
     }
 
     // Custom user bypass processes (exe/process names)
     final customProcesses = ref.watch(ConfigOptions.customBypassProcesses);
     if (customProcesses.trim().isNotEmpty) {
-      rules.add(SingboxRule(processNames: customProcesses.trim(), outbound: RuleOutbound.bypass));
+      final processList = customProcesses
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      rules.add(SingboxRule(processNames: processList, outbound: RuleOutbound.bypass));
     }
 
     final mode = ref.watch(serviceMode);
