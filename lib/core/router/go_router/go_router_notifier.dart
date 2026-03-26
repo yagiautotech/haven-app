@@ -14,6 +14,7 @@ class GoRouterNotifer extends _$GoRouterNotifer {
   static final rConfig = ValueNotifier<RoutingConfig>(loadingConfig);
   @override
   GoRouter build() {
+    rConfig.value = ref.read(routingConfigNotifierProvider);
     ref.listen(routingConfigNotifierProvider, (_, next) => rConfig.value = next);
     return GoRouter.routingConfig(
       initialLocation: '/home',
