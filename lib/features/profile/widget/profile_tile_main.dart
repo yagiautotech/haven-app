@@ -15,21 +15,8 @@ class ProfileTileMain extends HookConsumerWidget {
 
   final ProfileEntity profile;
   final bool isMain;
-  static const verifiedDomains = [
-    'hiddify.com',
-    // 't.me',
-    // 'telegram.me',
-    // 'instagram.com',
-    // 'x.com',
-    // 'facebook.com',
-  ];
-  static const verifiedLinks = [
-    'https://t.me/hiddify',
-    'https://t.me/hiddify_board',
-    'https://instagram.com/hiddify_com',
-    'https://x.com/hiddify_com',
-    'https://facebook.com/hiddify',
-  ];
+  static const verifiedDomains = <String>[];
+  static const verifiedLinks = <String>[];
   Future<void> _launchUrlWithCheck(BuildContext context, WidgetRef ref, String url) async {
     final uri = Uri.parse(url);
     final host = uri.host.toLowerCase();
@@ -183,9 +170,6 @@ class ProfileTileMain extends HookConsumerWidget {
     if (host.endsWith('facebook.com')) {
       return FontAwesomeIcons.facebook;
     }
-    if (host.endsWith('hiddify.com')) {
-      // return IconData();
-    }
     return icon ?? FluentIcons.link_24_regular;
   }
 
@@ -204,9 +188,6 @@ class ProfileTileMain extends HookConsumerWidget {
     }
     if (host.endsWith('facebook.com')) {
       return uri.pathSegments.lastWhere((e) => e.isNotEmpty, orElse: () => '');
-    }
-    if (host.endsWith('hiddify.com')) {
-      return "Hiddify";
     }
     return uri.host;
   }
