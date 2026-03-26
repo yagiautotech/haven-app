@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -77,13 +78,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _addProcess() {
     final input = _addProcessController.text.trim();
     if (input.isEmpty) return;
+    _saveProcess(input);
+    _addProcessController.clear();
+  }
+
+  void _saveProcess(String processName) {
     final saved = ref.read(ConfigOptions.customBypassProcesses);
     final list = _parseSaved(saved);
-    if (!list.contains(input)) {
-      list.add(input);
+    if (!list.contains(processName)) {
+      list.add(processName);
       ref.read(ConfigOptions.customBypassProcesses.notifier).update(list.join(','));
     }
-    _addProcessController.clear();
+  }
+
+  Future<void> _browseProcess() async {
+    final isWin = PlatformUtils.isWindows;
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Выберите программу',
+      type: isWin ? FileType.custom : FileType.any,
+      allowedExtensions: isWin ? ['exe'] : null,
+      allowMultiple: false,
+    );
+    if (result != null && result.files.isNotEmpty) {
+      final fileName = result.files.first.name;
+      _saveProcess(fileName);
+    }
   }
 
   void _removeProcess(String process) {
@@ -285,13 +304,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       onDelete: () => _removeProcess(p),
                     )),
                     if (bypassProcesses.isNotEmpty) const Gap(8),
+                    // Browse button (primary action)
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _browseProcess,
+                        icon: const Icon(Icons.folder_open_rounded, size: 20),
+                        label: Text(
+                          PlatformUtils.isWindows ? 'Выбрать .exe файл...' : 'Выбрать программу...',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1565C0),
+                          side: const BorderSide(color: Color(0xFF1565C0)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const Gap(8),
+                    // Manual input as fallback
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _addProcessController,
                             decoration: InputDecoration(
-                              hintText: PlatformUtils.isWindows ? 'Mango.exe' : 'mango',
+                              hintText: PlatformUtils.isWindows ? 'или введите Mango.exe вручную' : 'или введите имя процесса',
                               hintStyle: const TextStyle(color: Colors.grey),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
