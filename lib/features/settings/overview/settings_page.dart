@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -8,6 +9,7 @@ import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/gen/translations.g.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -22,11 +24,14 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _urlController = TextEditingController();
+  final _bypassController = TextEditingController();
   bool _isEditing = false;
+  bool _isBypassEditing = false;
 
   @override
   void dispose() {
     _urlController.dispose();
+    _bypassController.dispose();
     super.dispose();
   }
 
@@ -54,6 +59,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final addState = ref.watch(addProfileNotifierProvider);
     final locale = ref.watch(localePreferencesProvider);
     final version = ref.watch(appInfoProvider).valueOrNull?.presentVersion ?? '';
+    final savedBypass = ref.watch(ConfigOptions.customBypassDomains);
 
     // Pre-fill URL from active profile if not editing
     if (!_isEditing) {
@@ -63,6 +69,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (_urlController.text != url) {
         _urlController.text = url;
       }
+    }
+
+    // Pre-fill bypass domains if not editing
+    if (!_isBypassEditing && _bypassController.text != savedBypass) {
+      _bypassController.text = savedBypass;
     }
 
     return Scaffold(
@@ -136,6 +147,78 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
 
           const Gap(24),
+
+          // Bypass domains section
+          _SectionHeader(label: 'Сайты без VPN'),
+          const Gap(8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Домены через запятую (например: domain:mangoffice.ru,domain:mango-office.ru)',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey),
+                  ),
+                  const Gap(8),
+                  TextField(
+                    controller: _bypassController,
+                    decoration: InputDecoration(
+                      hintText: 'domain:example.ru,domain:bank.ru',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    maxLines: 3,
+                    minLines: 1,
+                    onChanged: (_) => setState(() => _isBypassEditing = true),
+                  ),
+                  const Gap(12),
+                  SizedBox(
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ref.read(ConfigOptions.customBypassDomains.notifier).update(_bypassController.text.trim());
+                        setState(() => _isBypassEditing = false);
+                      },
+                      icon: const Icon(Icons.save_rounded, size: 20),
+                      label: const Text('Сохранить', style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const Gap(24),
+
+          // Per-app proxy section (Android only)
+          if (PlatformUtils.isAndroid) ...[
+            _SectionHeader(label: 'Приложения без VPN'),
+            const Gap(8),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              child: ListTile(
+                leading: const Icon(Icons.apps_rounded, color: Color(0xFF1565C0)),
+                title: const Text('Выбрать приложения'),
+                subtitle: const Text('Укажите приложения, которые работают напрямую'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.goNamed('per-app-proxy'),
+              ),
+            ),
+            const Gap(24),
+          ],
 
           // Language section
           _SectionHeader(label: t.pages.settings.general.locale),

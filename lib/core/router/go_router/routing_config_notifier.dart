@@ -5,6 +5,8 @@ import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
+import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
+import 'package:hiddify/features/proxy/overview/proxies_overview_page.dart';
 import 'package:hiddify/features/settings/overview/settings_page.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -73,6 +75,18 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
               path: '/settings',
               pageBuilder: (_, state) =>
                   customTransition(TransitionType.slide, state.pageKey, const SettingsPage()),
+            ),
+            GoRoute(
+              name: 'proxies',
+              path: '/proxies',
+              pageBuilder: (_, state) =>
+                  customTransition(TransitionType.slide, state.pageKey, const ProxiesOverviewPage()),
+            ),
+            GoRoute(
+              name: 'per-app-proxy',
+              path: '/per-app-proxy',
+              pageBuilder: (_, state) =>
+                  customTransition(TransitionType.slide, state.pageKey, const PerAppProxyPage()),
             ),
           ],
         ),

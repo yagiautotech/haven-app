@@ -170,6 +170,8 @@ abstract class ConfigOptions {
 
   static final bypassLan = PreferencesNotifier.create<bool, bool>("bypass-lan", false);
 
+  static final customBypassDomains = PreferencesNotifier.create<String, String>("custom-bypass-domains", "");
+
   static final allowConnectionFromLan = PreferencesNotifier.create<bool, bool>("allow-connection-from-lan", false);
 
   static final enableFakeDns = PreferencesNotifier.create<bool, bool>("enable-fake-dns", false);
@@ -380,7 +382,13 @@ abstract class ConfigOptions {
             outbound: RuleOutbound.bypass,
           ),
         ],
-      Region.ru => <SingboxRule>[],
+      Region.ru => [
+          const SingboxRule(
+            domains: "domain:.ru,geosite:ru",
+            ip: "geoip:ru",
+            outbound: RuleOutbound.bypass,
+          ),
+        ],
       Region.af => [
           const SingboxRule(
             domains: "domain:.af,geosite:af",
@@ -397,6 +405,15 @@ abstract class ConfigOptions {
         ],
       _ => <SingboxRule>[],
     };
+
+    // Add custom user bypass domains
+    final customDomains = ref.watch(ConfigOptions.customBypassDomains);
+    if (customDomains.trim().isNotEmpty) {
+      rules.add(SingboxRule(
+        domains: customDomains.trim(),
+        outbound: RuleOutbound.bypass,
+      ));
+    }
 
     final mode = ref.watch(serviceMode);
     // final reg = ref.watch(Preferences.region.notifier).raw();

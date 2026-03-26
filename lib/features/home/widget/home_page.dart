@@ -54,6 +54,11 @@ class HomePage extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.dns_outlined),
+            onPressed: () => context.goNamed('proxies'),
+            tooltip: t.pages.proxies.title,
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.goNamed('settings'),
             tooltip: t.pages.settings.title,
