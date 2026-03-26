@@ -14,6 +14,7 @@ class SingboxRule with _$SingboxRule {
     String? ip,
     String? port,
     String? protocol,
+    String? processNames,
     @Default(RuleNetwork.tcpAndUdp) RuleNetwork network,
     @Default(RuleOutbound.proxy) RuleOutbound outbound,
   }) = _SingboxRule;

@@ -172,6 +172,8 @@ abstract class ConfigOptions {
 
   static final customBypassDomains = PreferencesNotifier.create<String, String>("custom-bypass-domains", "");
 
+  static final customBypassProcesses = PreferencesNotifier.create<String, String>("custom-bypass-processes", "");
+
   static final allowConnectionFromLan = PreferencesNotifier.create<bool, bool>("allow-connection-from-lan", false);
 
   static final enableFakeDns = PreferencesNotifier.create<bool, bool>("enable-fake-dns", false);
@@ -406,13 +408,22 @@ abstract class ConfigOptions {
       _ => <SingboxRule>[],
     };
 
-    // Add custom user bypass domains
+    // Custom user bypass domains (plain names, auto-prefixed with domain:)
     final customDomains = ref.watch(ConfigOptions.customBypassDomains);
     if (customDomains.trim().isNotEmpty) {
-      rules.add(SingboxRule(
-        domains: customDomains.trim(),
-        outbound: RuleOutbound.bypass,
-      ));
+      final domainList = customDomains
+          .split(',')
+          .map((d) => d.trim())
+          .where((d) => d.isNotEmpty)
+          .map((d) => d.contains(':') ? d : 'domain:$d')
+          .join(',');
+      rules.add(SingboxRule(domains: domainList, outbound: RuleOutbound.bypass));
+    }
+
+    // Custom user bypass processes (exe/process names)
+    final customProcesses = ref.watch(ConfigOptions.customBypassProcesses);
+    if (customProcesses.trim().isNotEmpty) {
+      rules.add(SingboxRule(processNames: customProcesses.trim(), outbound: RuleOutbound.bypass));
     }
 
     final mode = ref.watch(serviceMode);
