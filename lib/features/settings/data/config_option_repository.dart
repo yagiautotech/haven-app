@@ -364,7 +364,7 @@ abstract class ConfigOptions {
   };
 
   static final singboxConfigOptions = Provider<SingboxConfigOption>((ref) {
-    final region = ref.watch(Preferences.region);
+    final region = ref.watch(ConfigOptions.region);
     final rules = switch (region) {
       Region.ir => [
           const SingboxRule(
