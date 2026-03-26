@@ -12,6 +12,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'routing_config_notifier.g.dart';
 
+// Kept for backward compatibility with my_adaptive_layout.dart
+final branchesScope = <String, FocusScopeNode>{
+  'home': FocusScopeNode(),
+};
+
+String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) => 'home';
+int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String name) => 0;
+
 // when the routing config is not yet initialized, this config is used
 final loadingConfig = RoutingConfig(
   routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
