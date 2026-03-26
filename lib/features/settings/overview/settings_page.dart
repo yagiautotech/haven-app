@@ -138,7 +138,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const Gap(24),
 
           // Language section
-          _SectionHeader(label: t.pages.settings.general.language),
+          _SectionHeader(label: t.pages.settings.general.locale),
           const Gap(8),
           Card(
             elevation: 0,
