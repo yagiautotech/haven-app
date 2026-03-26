@@ -380,13 +380,7 @@ abstract class ConfigOptions {
             outbound: RuleOutbound.bypass,
           ),
         ],
-      Region.ru => [
-          const SingboxRule(
-            domains: "domain:.ru,geosite:ru",
-            ip: "geoip:ru",
-            outbound: RuleOutbound.bypass,
-          ),
-        ],
+      Region.ru => <SingboxRule>[],
       Region.af => [
           const SingboxRule(
             domains: "domain:.af,geosite:af",
