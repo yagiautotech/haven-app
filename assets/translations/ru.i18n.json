@@ -92,7 +92,7 @@
   "intro": {
     "banner": "Все, что вам нужно для интернета без ограничений",
     "termsAndPolicyCaution(rich)": "Продолжая, вы соглашаетесь с ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "Haven VPN"
+    "info": "Haven VPN"
   },
   "pages": {
     "home": {
