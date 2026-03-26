@@ -55,7 +55,7 @@ class HomePage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/settings'),
+            onPressed: () => context.goNamed('settings'),
             tooltip: t.pages.settings.title,
           ),
           const Gap(4),
@@ -79,7 +79,7 @@ class HomePage extends ConsumerWidget {
                   onTap: () async {
                     if (isSwitching) return;
                     if (!(hasAnyProfile.valueOrNull ?? false)) {
-                      context.push('/settings');
+                      context.goNamed('settings');
                       return;
                     }
                     await ref.read(connectionNotifierProvider.notifier).toggleConnection();
@@ -114,7 +114,7 @@ class HomePage extends ConsumerWidget {
                     isConnected: isConnected,
                   ),
                   _ when !(hasAnyProfile.valueOrNull ?? true) => _NoProfileCard(
-                    onAdd: () => context.push('/settings'),
+                    onAdd: () => context.goNamed('settings'),
                   ),
                   _ => const SizedBox.shrink(),
                 },
